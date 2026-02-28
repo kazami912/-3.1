@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#13110F">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>創作戰情室 — 嚎哮排演</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0D0B09;
+  --bg-base: #13110F;
+  --bg-card: #1A1714;
+  --bg-elevated: #1E1B17;
+  --bg-hover: #242119;
+  --border-subtle: #1E1B17;
+  --border-default: #2A2520;
+  --border-strong: #444;
+  --text-primary: #E8DCC8;
+  --text-secondary: #999;
+  --text-muted: #666;
+  --text-dim: #444;
+  --accent-red: #E85454;
+  --accent-orange: #E8734A;
+  --accent-yellow: #E8C454;
+  --accent-green: #8BC472;
+  --accent-blue: #6BA0C4;
+  --accent-sand: #D4A574;
+  --accent-purple: #A07ECB;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+@keyframes fadeInFast { from { opacity:0 } to { opacity:1 } }
+@keyframes pulse { 0%,100% { opacity:.4 } 50% { opacity:.7 } }
+@keyframes slideUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+
+.chip {
+  padding: 5px 9px; border-radius: 7px; cursor: grab; font-size: 12px;
+  border: 1px solid var(--border-subtle); background: var(--bg-card);
+  transition: all .12s ease; animation: fadeIn .2s ease;
+  line-height: 1.4; display: flex; align-items: center; gap: 6px;
+  -webkit-user-select: none; user-select: none;
+}
+.chip:active { transform: scale(0.97); }
+.chip.dragging { opacity: .3; }
+
+.darkroom-chip {
+  padding: 8px 10px; border-radius: 8px; cursor: grab; font-size: 12px;
+  border: 1px solid var(--border-default); background: var(--bg-card);
+  transition: all .15s ease; animation: fadeIn .3s ease;
+  line-height: 1.5; display: flex; align-items: flex-start; gap: 8px;
+}
+
+.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+.cell { padding: 4px; min-height: 40px; transition: background .15s ease; border-radius: 4px; }
+.cell.drop-active { background: rgba(255,255,255,0.04); outline: 1px dashed var(--border-strong); }
+
+.pill {
+  padding: 4px 10px; border-radius: 12px;
+  border: 1px solid var(--border-default); background: transparent;
+  color: var(--text-secondary); cursor: pointer; font-size: 11px;
+  font-family: inherit; transition: all .12s; white-space: nowrap;
+  -webkit-user-select: none; user-select: none;
+}
+.pill:active { transform: scale(0.95); }
+.pill.on { background: var(--border-default); border-color: var(--border-strong); color: var(--text-primary); }
+
+.btn {
+  border: none; font-size: 12px; padding: 6px 16px;
+  background: var(--border-default); border-radius: 6px;
+  color: var(--text-primary); cursor: pointer; font-family: inherit;
+  font-weight: 500; white-space: nowrap; transition: all .12s;
+}
+.btn:active { transform: scale(0.96); opacity: .8; }
+
+.tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--border-subtle); color: var(--text-secondary); }
+
+input, textarea, select {
+  font-family: inherit; font-size: 13px; background: var(--bg-deep);
+  color: var(--text-primary); border: 1px solid var(--border-default);
+  border-radius: 6px; padding: 8px 10px; width: 100%; outline: none;
+  transition: border-color .15s;
+}
+input:focus, textarea:focus { border-color: var(--border-strong); }
+textarea { resize: vertical; }
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; animation: fadeInFast .15s ease;
+  padding: var(--safe-top) 0 var(--safe-bottom) 0;
+}
+.panel {
+  background: var(--bg-elevated); border: 1px solid var(--border-strong);
+  border-radius: 14px; padding: 20px; width: 92%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto; animation: slideUp .2s ease;
+}
+
+/* Mobile-first grid scroll */
+.grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 0 16px; }
+.grid-wrap table { width: 100%; min-width: 720px; border-collapse: collapse; }
+
+/* Header safe area */
+.header {
+  padding: calc(var(--safe-top) + 12px) 16px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 8;
+}
+
+/* Darkroom */
+.darkroom {
+  margin: 12px 12px; padding: 14px 16px;
+  background: linear-gradient(135deg, var(--bg-card) 0%, #16140F 100%);
+  border: 1px solid var(--border-default); border-radius: 12px;
+  position: relative; transition: border-color .15s;
+}
+.darkroom.drop-active { border-color: var(--border-strong); }
+
+/* Bottom safe area spacer */
+.bottom-safe { height: calc(var(--safe-bottom) + 16px); }
+
+/* Sync panel */
+.sync-panel {
+  padding: 12px 16px; border-bottom: 1px solid var(--border-subtle);
+  background: #16140F; animation: fadeIn .2s ease;
+}
+
+/* Touch-friendly sizes */
+@media (max-width: 640px) {
+  .chip { padding: 6px 10px; font-size: 13px; min-height: 36px; }
+  .pill { padding: 5px 12px; font-size: 12px; }
+  .header { padding: calc(var(--safe-top) + 10px) 12px 8px; }
+  .darkroom { margin: 10px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// 嚎哮排演 創作戰情室 — PWA Edition
+// ═══════════════════════════════════════════════
+
+const MODES = [
+  { key: "mining", icon: "⛏️", label: "採礦", color: "#D4A574" },
+  { key: "dialectic", icon: "🔄", label: "辯證", color: "#E8734A" },
+  { key: "integration", icon: "🔗", label: "整合", color: "#6BA0C4" },
+  { key: "harvest", icon: "🪓", label: "收割", color: "#8BC472" },
+];
+
+const LAYERS = [
+  { key: "L1", label: "命題", desc: "這齣戲在說什麼", color: "#E85454" },
+  { key: "L2", label: "結構", desc: "怎麼組織・怎麼說", color: "#E8A054" },
+  { key: "L3", label: "角色", desc: "誰在說・為什麼", color: "#E8D454" },
+  { key: "L4", label: "場景", desc: "具體發生什麼事", color: "#82C46B" },
+  { key: "L5", label: "形式", desc: "用什麼手段呈現", color: "#6BA0C4" },
+  { key: "L6", label: "語言", desc: "台詞與歌詞", color: "#A07ECB" },
+];
+
+const PRIORITY = {
+  urgent: { label: "急迫", dot: "#E85454" },
+  active: { label: "進行", dot: "#E8C454" },
+  parked: { label: "擱置", dot: "#666" },
+  locked: { label: "鎖定", dot: "#8BC472" },
+};
+
+const STORAGE_KEY = "dialectic-warroom-v2";
+
+const defaultItems = [
+  { id: "d1", text: "「真誠即技術」", layer: "L1", mode: "dialectic", priority: "locked", note: "0225已確立，需確認在三層結構中是否仍成立" },
+  { id: "d2", text: "馬浩 vs 舅舅：角色架構選擇", layer: "L2", mode: "harvest", priority: "urgent", note: "0225鎖定馬浩，0226團隊推向舅舅三層結構" },
+  { id: "d3", text: "前半開放跳躍 vs 後半收束", layer: "L2", mode: "integration", priority: "active", note: "混合式結構的接合問題" },
+  { id: "d4", text: "舅舅背景與建豪的距離", layer: "L3", mode: "harvest", priority: "urgent", note: "類自傳 vs 指桑罵槐" },
+  { id: "d5", text: "從政線的結構佔比", layer: "L3", mode: "dialectic", priority: "active", note: "貫穿全劇 vs 只佔某章節" },
+  { id: "d6", text: "開場設計：Kahoot + 首歌", layer: "L4", mode: "mining", priority: "active", note: "多個提案未定" },
+  { id: "d7", text: "結尾：觀眾帶走什麼？", layer: "L4", mode: "dialectic", priority: "urgent", note: "最大未解問題" },
+  { id: "d8", text: "唱歌的邏輯與比例", layer: "L5", mode: "dialectic", priority: "urgent", note: "什麼時候唱、誰在唱、對誰唱" },
+  { id: "d9", text: "年代跳躍機制", layer: "L5", mode: "mining", priority: "parked", note: "有趣但非核心" },
+  { id: "d10", text: "影像/偶的使用", layer: "L5", mode: "mining", priority: "parked", note: "需試做確認可行性" },
+  { id: "d11", text: "半夜的轟鳴", layer: "incubation", mode: "incubation", priority: "active", note: "半夜醒來都會聽到的巨大轟鳴，你以為只是工程車，但那個在黑夜中移動的龐然大物是什麼？引力點：集體選擇不去看的恐懼。" },
+];
+
+function genId() { return "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+// ═══ STATE ═══
+let state = {
+  items: [],
+  selected: null,
+  filterPriority: null,
+  view: "grid",
+  showSync: false,
+  syncMsg: "",
+  syncLog: [],
+  dragId: null,
+  dropTarget: null,
+  adding: null,
+  addingDarkroom: false,
+};
+
+function loadItems() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { state.items = JSON.parse(raw); return; }
+  } catch(e) {}
+  state.items = [...defaultItems];
+  saveItems();
+}
+
+function saveItems() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items)); } catch(e) {}
+}
+
+function updateItem(id, patch) {
+  state.items = state.items.map(i => i.id === id ? { ...i, ...patch } : i);
+  saveItems();
+  render();
+}
+
+function removeItem(id) {
+  state.items = state.items.filter(i => i.id !== id);
+  state.selected = null;
+  saveItems();
+  render();
+}
+
+function addItem(layer, mode, text) {
+  if (!text.trim()) return;
+  state.items.push({ id: genId(), text: text.trim(), layer, mode, priority: "active", note: "" });
+  state.adding = null;
+  state.addingDarkroom = false;
+  saveItems();
+  render();
+}
+
+function getCellItems(layer, mode) {
+  let list = state.items.filter(i => i.layer === layer && i.mode === mode);
+  if (state.filterPriority) list = list.filter(i => i.priority === state.filterPriority);
+  const ord = { urgent: 0, active: 1, parked: 2, locked: 3 };
+  return list.sort((a, b) => (ord[a.priority] ?? 9) - (ord[b.priority] ?? 9));
+}
+
+function getLayerItems(layer) {
+  let list = state.items.filter(i => i.layer === layer);
+  if (state.filterPriority) list = list.filter(i => i.priority === state.filterPriority);
+  return list;
+}
+
+// ═══ SYNC (Claude JSON) ═══
+function applySync(input) {
+  let ops;
+  try { ops = JSON.parse(input); } catch { state.syncMsg = "❌ JSON 格式錯誤"; render(); return; }
+  if (!Array.isArray(ops)) ops = [ops];
+  const log = [];
+  for (const op of ops) {
+    if (op.action === "add") {
+      const ni = { id: op.id || genId(), text: op.text || "（未命名）", layer: op.layer || "L4", mode: op.mode || "mining", priority: op.priority || "active", note: op.note || "" };
+      state.items.push(ni);
+      log.push(`✅ 新增「${ni.text}」→ ${ni.layer}/${ni.mode}`);
+    } else if (op.action === "update") {
+      const idx = state.items.findIndex(i => i.id === op.id || i.text === op.match);
+      if (idx >= 0) {
+        const old = state.items[idx];
+        const ch = {};
+        if (op.text) ch.text = op.text;
+        if (op.layer) ch.layer = op.layer;
+        if (op.mode) ch.mode = op.mode;
+        if (op.priority) ch.priority = op.priority;
+        if (op.note !== undefined) ch.note = op.note;
+        state.items[idx] = { ...old, ...ch };
+        log.push(`✅ 更新「${old.text}」：${Object.keys(ch).join(", ")}`);
+      } else { log.push(`⚠️ 找不到：${op.id || op.match}`); }
+    } else if (op.action === "remove") {
+      const idx = state.items.findIndex(i => i.id === op.id || i.text === op.match);
+      if (idx >= 0) { log.push(`✅ 移除「${state.items[idx].text}」`); state.items.splice(idx, 1); }
+      else { log.push(`⚠️ 找不到：${op.id || op.match}`); }
+    }
+  }
+  saveItems();
+  state.syncLog = log;
+  state.syncMsg = `套用了 ${log.length} 筆操作`;
+  render();
+}
+
+function exportState() {
+  const s = state.items.map(i => ({ id: i.id, text: i.text, layer: i.layer, mode: i.mode, priority: i.priority, note: i.note }));
+  navigator.clipboard.writeText(JSON.stringify(s, null, 2)).then(() => {
+    state.syncMsg = "已複製到剪貼簿——貼給 Claude 即可";
+    render();
+  });
+}
+
+// ═══ DRAG & DROP (touch + mouse) ═══
+let touchDragId = null;
+let touchClone = null;
+let touchStartY = 0;
+let touchMoved = false;
+
+function setupDrag(el, id) {
+  // Mouse drag
+  el.draggable = true;
+  el.addEventListener("dragstart", (e) => { state.dragId = id; e.dataTransfer.effectAllowed = "move"; });
+  el.addEventListener("dragend", () => { state.dragId = null; state.dropTarget = null; render(); });
+
+  // Touch drag
+  el.addEventListener("touchstart", (e) => {
+    touchDragId = id;
+    touchStartY = e.touches[0].clientY;
+    touchMoved = false;
+  }, { passive: true });
+
+  el.addEventListener("touchmove", (e) => {
+    if (Math.abs(e.touches[0].clientY - touchStartY) > 10) touchMoved = true;
+  }, { passive: true });
+
+  el.addEventListener("touchend", (e) => {
+    if (!touchMoved && touchDragId === id) {
+      state.selected = id;
+      render();
+    }
+    touchDragId = null;
+    touchMoved = false;
+  });
+}
+
+function setupDropZone(el, layer, mode) {
+  el.addEventListener("dragover", (e) => { e.preventDefault(); state.dropTarget = { layer, mode }; el.classList.add("drop-active"); });
+  el.addEventListener("dragleave", () => { state.dropTarget = null; el.classList.remove("drop-active"); });
+  el.addEventListener("drop", (e) => {
+    e.preventDefault();
+    if (state.dragId) updateItem(state.dragId, { layer, mode });
+    state.dragId = null;
+    state.dropTarget = null;
+    render();
+  });
+}
+
+// ═══ RENDER ═══
+function render() {
+  const app = document.getElementById("app");
+  const darkroomItems = state.items.filter(i => i.layer === "incubation");
+  const gridItemCount = state.items.filter(i => i.layer !== "incubation").length;
+
+  let html = `
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div style="font-size:10px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase">嚎哮排演 Howling Studio</div>
+      <h1 style="font-size:18px;font-weight:700;margin:2px 0 0">創作戰情室</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text-dim)">篩選</span>
+      <button class="pill ${!state.filterPriority ? 'on' : ''}" data-filter="all">全部 ${state.items.length}</button>
+      ${Object.entries(PRIORITY).map(([k, v]) => {
+        const c = state.items.filter(i => i.priority === k).length;
+        return `<button class="pill ${state.filterPriority === k ? 'on' : ''}" data-filter="${k}">
+          <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${v.dot};margin-right:4px;vertical-align:middle"></span>${v.label} ${c}
+        </button>`;
+      }).join("")}
+      <span style="color:var(--border-default);margin:0 2px">|</span>
+      <button class="pill ${state.view === 'grid' ? 'on' : ''}" data-view="grid">雙軸</button>
+      <button class="pill ${state.view === 'list' ? 'on' : ''}" data-view="list">清單</button>
+      <button class="pill ${state.showSync ? 'on' : ''}" data-action="toggleSync" style="${state.showSync ? 'color:var(--accent-blue);border-color:var(--accent-blue)' : ''}">⚡ 同步</button>
+      <button class="pill" data-action="reset" style="color:var(--text-dim);font-size:10px">重置</button>
+    </div>
+  </div>`;
+
+  // SYNC PANEL
+  if (state.showSync) {
+    html += `
+    <div class="sync-panel">
+      <div style="display:flex;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:11px;color:var(--accent-blue);font-weight:600;margin-bottom:6px">📤 匯出給 Claude</div>
+          <p style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;line-height:1.5">複製當前狀態，貼進對話中讓 Claude 讀取地圖。</p>
+          <button class="btn" data-action="export">複製狀態到剪貼簿</button>
+        </div>
+        <div style="width:1px;background:var(--border-default)"></div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:11px;color:var(--accent-orange);font-weight:600;margin-bottom:6px">📥 套用 Claude 更新</div>
+          <p style="font-size:11px;color:var(--text-secondary);margin-bottom:6px;line-height:1.5">把 Claude 輸出的 JSON 更新指令貼在這裡。</p>
+          <textarea id="syncInput" rows="3" placeholder="貼上 Claude 的 JSON 更新指令⋯" style="font-size:11px;margin-bottom:6px"></textarea>
+          <button class="btn" data-action="applySync" style="background:#2A1A14;color:var(--accent-orange)">套用更新</button>
+        </div>
+      </div>
+      ${state.syncMsg ? `<div style="font-size:11px;color:var(--accent-green);margin-top:4px">${esc(state.syncMsg)}</div>` : ""}
+      ${state.syncLog.length > 0 ? `<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.6">${state.syncLog.map(l => `<div>${esc(l)}</div>`).join("")}</div>` : ""}
+    </div>`;
+  }
+
+  // DARKROOM
+  html += `
+  <div class="darkroom" id="darkroom-zone">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:16px">🥒</span>
+      <span style="font-size:14px;font-weight:600">暗房</span>
+      <span style="font-size:11px;color:var(--text-dim)">孵化中的念頭——還不知道它們是什麼，不急著定義</span>
+      ${darkroomItems.length > 0 ? `<span class="tag">${darkroomItems.length}</span>` : ""}
+    </div>`;
+
+  if (darkroomItems.length === 0 && !state.addingDarkroom) {
+    html += `<div style="font-size:12px;color:var(--text-dim);font-style:italic;padding:4px 0">（空的。半夜醒來有什麼念頭，丟進來。）</div>`;
+  }
+
+  html += `<div style="display:flex;flex-direction:column;gap:6px">`;
+  for (const item of darkroomItems) {
+    html += `
+    <div class="darkroom-chip" data-item-id="${item.id}" data-drag-id="${item.id}">
+      <span style="font-size:14px;line-height:1;margin-top:1px;animation:pulse 3s infinite">🥒</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;margin-bottom:2px">${esc(item.text)}</div>
+        ${item.note ? `<div style="font-size:11px;color:var(--text-secondary);line-height:1.4">${esc(item.note.slice(0, 100))}${item.note.length > 100 ? "⋯" : ""}</div>` : ""}
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  if (state.addingDarkroom) {
+    html += `<input id="darkroom-input" autofocus placeholder="一個念頭⋯" style="font-size:12px;padding:5px 8px;margin-top:8px;background:var(--bg-deep);border:1px solid var(--border-default)">`;
+  } else {
+    html += `<button data-action="addDarkroom" style="border:none;background:none;color:var(--text-dim);font-size:11px;margin-top:8px;padding:2px 0;font-family:inherit;cursor:pointer">+ 新念頭</button>`;
+  }
+  html += `</div>`;
+
+  // GRID VIEW
+  if (state.view === "grid") {
+    html += `<div class="grid-wrap"><table><thead><tr>
+      <th style="width:80px;padding:10px 8px 6px;text-align:left;border-bottom:1px solid var(--border-subtle)">
+        <span style="font-size:10px;color:var(--text-dim)">層╲模式</span>
+      </th>`;
+    for (const m of MODES) {
+      html += `<th style="padding:10px 6px 6px;text-align:center;border-bottom:1px solid var(--border-subtle);width:22%">
+        <span style="font-size:16px">${m.icon}</span>
+        <span style="font-size:13px;font-weight:600;color:${m.color};margin-left:4px">${m.label}</span>
+      </th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    LAYERS.forEach((layer, li) => {
+      const bg = li % 2 === 0 ? "#16140F" : "var(--bg-base)";
+      html += `<tr style="border-bottom:1px solid var(--bg-card)">
+        <td style="padding:8px;vertical-align:top;border-right:1px solid var(--bg-elevated);background:${bg}">
+          <div style="font-size:13px;font-weight:600;color:${layer.color}">${layer.key}</div>
+          <div style="font-size:12px;font-weight:500;color:#ccc">${layer.label}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${layer.desc}</div>
+        </td>`;
+
+      for (const mode of MODES) {
+        const ci = getCellItems(layer.key, mode.key);
+        html += `<td class="cell" data-drop-layer="${layer.key}" data-drop-mode="${mode.key}" style="vertical-align:top;padding:6px 5px;background:${bg}">
+          <div style="display:flex;flex-direction:column;gap:3px;min-height:32px">`;
+        for (const item of ci) {
+          html += `<div class="chip" data-item-id="${item.id}" data-drag-id="${item.id}">
+            <span class="dot" style="background:${PRIORITY[item.priority]?.dot}"></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.text)}</span>
+          </div>`;
+        }
+        html += `<button data-add-layer="${layer.key}" data-add-mode="${mode.key}" style="border:none;background:none;font-size:11px;color:var(--text-dim);text-align:left;padding:2px 4px;font-family:inherit;cursor:pointer">+</button>`;
+        html += `</div></td>`;
+      }
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+  } else {
+    // LIST VIEW
+    html += `<div style="padding:12px 16px">`;
+    for (const layer of LAYERS) {
+      const li = getLayerItems(layer.key).filter(i => i.layer !== "incubation");
+      if (state.filterPriority && li.length === 0) continue;
+      html += `<div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700;color:${layer.color}">${layer.key} ${layer.label}</span>
+          <span style="font-size:10px;color:var(--text-dim)">${layer.desc}</span>
+          <span class="tag">${li.length}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;padding-left:8px">`;
+      if (li.length === 0) {
+        html += `<div style="font-size:11px;color:var(--text-dim);font-style:italic;padding:4px">（空）</div>`;
+      }
+      for (const item of li) {
+        const m = MODES.find(x => x.key === item.mode);
+        html += `<div class="chip" data-item-id="${item.id}" style="cursor:pointer">
+          <span class="dot" style="background:${PRIORITY[item.priority]?.dot}"></span>
+          <span style="flex:1">${esc(item.text)}</span>
+          <span class="tag" style="color:${m?.color}">${m?.icon} ${m?.label}</span>
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+    html += `</div>`;
+  }
+
+  // DETAIL PANEL
+  const sel = state.selected ? state.items.find(i => i.id === state.selected) : null;
+  if (sel) {
+    const layerInfo = LAYERS.find(l => l.key === sel.layer);
+    const modeInfo = MODES.find(m => m.key === sel.mode);
+    html += `
+    <div class="overlay" id="detail-overlay">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+          <div style="display:flex;gap:6px;align-items:center">
+            ${sel.layer === "incubation"
+              ? `<span style="font-size:12px;font-weight:600;color:var(--text-secondary)">🥒 暗房</span>`
+              : `<span style="font-size:12px;font-weight:600;color:${layerInfo?.color}">${sel.layer} ${layerInfo?.label}</span>
+                 <span style="color:var(--text-dim)">→</span>
+                 <span style="font-size:12px;color:${modeInfo?.color}">${modeInfo?.icon} ${modeInfo?.label}</span>`
+            }
+          </div>
+          <button data-action="closeDetail" style="border:none;background:none;color:var(--text-primary);font-size:16px;padding:2px;cursor:pointer">✕</button>
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">標題</label>
+          <input id="detail-text" value="${esc(sel.text)}">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">備註</label>
+          <textarea id="detail-note" rows="3">${esc(sel.note || "")}</textarea>
+        </div>`;
+
+    if (sel.layer === "incubation") {
+      html += `
+      <div style="margin-bottom:12px;padding:10px 12px;background:var(--bg-deep);border-radius:6px;border:1px solid var(--border-default)">
+        <div style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">這個念頭孵出來了？把它送進地圖：</div>
+        <div style="display:flex;gap:8px">
+          <select id="hatch-layer" style="flex:1">${LAYERS.map(l => `<option value="${l.key}">${l.key} ${l.label}</option>`).join("")}</select>
+          <select id="hatch-mode" style="flex:1">${MODES.map(m => `<option value="${m.key}">${m.icon} ${m.label}</option>`).join("")}</select>
+          <button class="btn" data-action="hatch">孵出</button>
+        </div>
+      </div>`;
+    } else {
+      html += `
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="flex:1">
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">優先級</label>
+          <select id="detail-priority">${Object.entries(PRIORITY).map(([k, v]) => `<option value="${k}" ${sel.priority === k ? "selected" : ""}>${v.label}</option>`).join("")}</select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">層次</label>
+          <select id="detail-layer">${LAYERS.map(l => `<option value="${l.key}" ${sel.layer === l.key ? "selected" : ""}>${l.key} ${l.label}</option>`).join("")}</select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px">模式</label>
+          <select id="detail-mode">${MODES.map(m => `<option value="${m.key}" ${sel.mode === m.key ? "selected" : ""}>${m.icon} ${m.label}</option>`).join("")}</select>
+        </div>
+      </div>`;
+    }
+
+    html += `
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:10px">ID: ${sel.id}</div>
+        <div style="display:flex;justify-content:space-between">
+          <button data-action="deleteItem" style="border:none;background:none;font-size:12px;color:var(--accent-red);cursor:pointer;font-family:inherit">刪除</button>
+          <button class="btn" data-action="closeDetail">完成</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="bottom-safe"></div>`;
+  app.innerHTML = html;
+
+  // ═══ BIND EVENTS ═══
+  bindEvents();
+}
+
+function bindEvents() {
+  // Filter pills
+  document.querySelectorAll("[data-filter]").forEach(el => {
+    el.addEventListener("click", () => {
+      const f = el.dataset.filter;
+      state.filterPriority = f === "all" ? null : (state.filterPriority === f ? null : f);
+      render();
+    });
+  });
+
+  // View toggle
+  document.querySelectorAll("[data-view]").forEach(el => {
+    el.addEventListener("click", () => { state.view = el.dataset.view; render(); });
+  });
+
+  // Actions
+  document.querySelectorAll("[data-action]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      switch (el.dataset.action) {
+        case "toggleSync": state.showSync = !state.showSync; render(); break;
+        case "reset": if (confirm("重置所有資料？")) { state.items = [...defaultItems]; saveItems(); render(); } break;
+        case "export": exportState(); break;
+        case "applySync": { const inp = document.getElementById("syncInput"); if (inp) applySync(inp.value); } break;
+        case "addDarkroom": state.addingDarkroom = true; render(); setTimeout(() => document.getElementById("darkroom-input")?.focus(), 50); break;
+        case "closeDetail": saveDetail(); state.selected = null; render(); break;
+        case "deleteItem": if (state.selected) removeItem(state.selected); break;
+        case "hatch": {
+          if (!state.selected) break;
+          const l = document.getElementById("hatch-layer")?.value;
+          const m = document.getElementById("hatch-mode")?.value;
+          if (l && m) { updateItem(state.selected, { layer: l, mode: m }); state.selected = null; render(); }
+          break;
+        }
+      }
+    });
+  });
+
+  // Darkroom input
+  const dInput = document.getElementById("darkroom-input");
+  if (dInput) {
+    dInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { addItem("incubation", "incubation", dInput.value); }
+      if (e.key === "Escape") { state.addingDarkroom = false; render(); }
+    });
+    dInput.addEventListener("blur", () => { if (dInput.value.trim()) addItem("incubation", "incubation", dInput.value); else { state.addingDarkroom = false; render(); } });
+  }
+
+  // Cell add buttons
+  document.querySelectorAll("[data-add-layer]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const layer = el.dataset.addLayer;
+      const mode = el.dataset.addMode;
+      const text = prompt("新素材：");
+      if (text && text.trim()) addItem(layer, mode, text);
+    });
+  });
+
+  // Item clicks
+  document.querySelectorAll("[data-item-id]").forEach(el => {
+    el.addEventListener("click", () => {
+      saveDetail();
+      state.selected = el.dataset.itemId;
+      render();
+    });
+  });
+
+  // Drag & drop
+  document.querySelectorAll("[data-drag-id]").forEach(el => setupDrag(el, el.dataset.dragId));
+  document.querySelectorAll("[data-drop-layer]").forEach(el => setupDropZone(el, el.dataset.dropLayer, el.dataset.dropMode));
+
+  // Darkroom drop zone
+  const drZone = document.getElementById("darkroom-zone");
+  if (drZone) setupDropZone(drZone, "incubation", "incubation");
+
+  // Detail overlay click-outside
+  const overlay = document.getElementById("detail-overlay");
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) { saveDetail(); state.selected = null; render(); }
+    });
+  }
+}
+
+function saveDetail() {
+  if (!state.selected) return;
+  const text = document.getElementById("detail-text")?.value;
+  const note = document.getElementById("detail-note")?.value;
+  const priority = document.getElementById("detail-priority")?.value;
+  const layer = document.getElementById("detail-layer")?.value;
+  const mode = document.getElementById("detail-mode")?.value;
+  const patch = {};
+  if (text !== undefined) patch.text = text;
+  if (note !== undefined) patch.note = note;
+  if (priority) patch.priority = priority;
+  if (layer) patch.layer = layer;
+  if (mode) patch.mode = mode;
+  if (Object.keys(patch).length > 0) {
+    state.items = state.items.map(i => i.id === state.selected ? { ...i, ...patch } : i);
+    saveItems();
+  }
+}
+
+// ═══ INIT ═══
+loadItems();
+render();
+
+// Register Service Worker
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>

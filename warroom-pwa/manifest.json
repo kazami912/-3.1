@@ -1,0 +1,22 @@
+{
+  "name": "創作戰情室 — 嚎哮排演",
+  "short_name": "戰情室",
+  "description": "六層 × 四模式的創作辯證地圖",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#13110F",
+  "theme_color": "#13110F",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
